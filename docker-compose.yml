@@ -12,7 +12,7 @@ services:
       - "5432:5432"
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./database/data:/var/lib/mysql
+      - ./database/data:/var/lib/postgresql/data
 
   php-fpm:
     build:
@@ -24,6 +24,6 @@ services:
       - APP_ENV=${APP_ENV}
       - APP_SECRET=${APP_SECRET}
     volumes:
-      - ../src:/var/www
+      - ../backend:/var/www
     ports:
       - "8000:8000"
