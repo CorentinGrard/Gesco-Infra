@@ -24,7 +24,7 @@ services:
         # KEYCLOAK_IMPORT: /tmp/realm-export.json
         JDBC_PARAMS: "ssl=false"
       ports:
-        - "8080:8080"
+        - "8090:8080"
       # volumes:
       #   - ./realm-export.json:/tmp/realm-export.json
       depends_on:
