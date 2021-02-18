@@ -1,29 +1,34 @@
 version: '3'
 
 services:
-  database:
-    build:
-      context: ./database
-    environment:
-      - POSTGRES_DB=db
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./database/data:/var/lib/postgresql/data
+  postgres:
+      image: postgres
+      volumes:
+        - ./postgres_data:/var/lib/postgresql/data
+      environment:
+        POSTGRES_DB: keycloak
+        POSTGRES_USER: keycloak
+        POSTGRES_PASSWORD: password
 
-  php-fpm:
-    build:
-      context: ./php-fpm
-    depends_on:
-      - database
-    environment:
-      - DATABASE_URL=postgresql://admin:admin@database:5432/db?serverVersion=5.7
-      - APP_ENV=${APP_ENV}
-      - APP_SECRET=${APP_SECRET}
-    volumes:
-      - ../backend:/var/www
-    ports:
-      - "8000:8000"
+  keycloak:
+      image: jboss/keycloak:latest
+      environment:
+        DB_VENDOR: POSTGRES
+        DB_ADDR: postgres
+        DB_DATABASE: keycloak
+        DB_USER: keycloak
+        DB_SCHEMA: public
+        DB_PASSWORD: password
+        KEYCLOAK_USER: admin
+        KEYCLOAK_PASSWORD: admin
+        # KEYCLOAK_IMPORT: /tmp/realm-export.json
+        JDBC_PARAMS: "ssl=false"
+      ports:
+        - "8080:8080"
+      # volumes:
+      #   - ./realm-export.json:/tmp/realm-export.json
+      depends_on:
+        - postgres
+
+# volumes:
+#   postgres_data:
