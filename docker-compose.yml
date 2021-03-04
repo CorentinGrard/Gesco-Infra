@@ -1,34 +1,41 @@
-version: '3'
+version: "3"
 
 services:
-  postgres:
-      image: postgres:13
-      volumes:
-        - ./postgres_data:/var/lib/postgresql/data
-      environment:
-        POSTGRES_DB: keycloak
-        POSTGRES_USER: keycloak
-        POSTGRES_PASSWORD: password
+  database:
+    image: postgres:9.6.20-alpine
+    environment:
+      - POSTGRES_DB=db
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database/data:/var/lib/postgresql/data
 
-  keycloak:
-      image: jboss/keycloak:12.0.3
-      environment:
-        DB_VENDOR: POSTGRES
-        DB_ADDR: postgres
-        DB_DATABASE: keycloak
-        DB_USER: keycloak
-        DB_SCHEMA: public
-        DB_PASSWORD: password
-        KEYCLOAK_USER: admin
-        KEYCLOAK_PASSWORD: admin
-        # KEYCLOAK_IMPORT: /tmp/realm-export.json
-        JDBC_PARAMS: "ssl=false"
-      ports:
-        - "8090:8080"
-      # volumes:
-      #   - ./realm-export.json:/tmp/realm-export.json
-      depends_on:
-        - postgres
+  backend:
+    build:
+      context: https://corentin-grard:DU1sMNVe9xssxyeKjYsY@gitlab.mines-ales.fr/infres-11-projet-3a/gesco/backend.git
+    depends_on:
+      - database
+    environment:
+      - DATABASE_URL=postgresql://admin:admin@database:5432/db?serverVersion=5.7
+      - POSTGRES_PASSWORD=admin
+      - APP_ENV=${APP_ENV}
+      - APP_SECRET=${APP_SECRET}
+      - KEYCLOAK_URL=http://matthieu.ga:2099/auth/realms/imt-mines-ales/protocol/openid-connect/userinfo
+      - KEYCLOAK_CLIENT=gesco
+      - KEYCLOAK_SECRET=f6XT5llLANFDQ7wpG8A23w8adb_U1pvvPaXwXE-EvNc
+    ports:
+      - "8000:8000"
 
-# volumes:
-#   postgres_data:
+  frontend:
+    build: 
+      context: https://corentin-grard:DU1sMNVe9xssxyeKjYsY@gitlab.mines-ales.fr/infres-11-projet-3a/gesco/frontend.git
+      args:
+        - VUE_APP_KEYCLOAK_URL=http://matthieu.ga:2099/auth/
+        - VUE_APP_KEYCLOAK_REALM=imt-mines-ales
+        - VUE_APP_KEYCLOAK_CLIENT_ID=gesco
+        - VUE_APP_BASE_URL=/
+        - VUE_APP_BACKEND_BASE_URL=http://localhost:8000
+    ports:
+      - "8080:80"
