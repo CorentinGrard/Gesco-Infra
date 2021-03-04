@@ -20,8 +20,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://admin:admin@database:5432/db?serverVersion=5.7
       - POSTGRES_PASSWORD=admin
-      - APP_ENV=${APP_ENV}
-      - APP_SECRET=${APP_SECRET}
+      - APP_ENV=dev
+      - APP_SECRET=13bf30003133e6c57953c89d7e0b72e9
       - KEYCLOAK_URL=http://matthieu.ga:2099/auth/realms/imt-mines-ales/protocol/openid-connect/userinfo
       - KEYCLOAK_CLIENT=gesco
       - KEYCLOAK_SECRET=f6XT5llLANFDQ7wpG8A23w8adb_U1pvvPaXwXE-EvNc
