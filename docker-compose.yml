@@ -1,41 +1,92 @@
 version: "3"
 
 services:
-  database:
+  keycloak-database:
+    image: postgres:13
+    container_name: keycloak-database
+    volumes:
+      - /data/db_keycloak:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    networks:
+      - web
+
+  keycloak:
+    image: jboss/keycloak:12.0.3
+    container_name: keycloak
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+        DB_VENDOR: postgres
+        DB_ADDR: keycloak-database
+        DB_USER: keycloak
+        DB_PASSWORD: password
+        KEYCLOAK_USER: admin
+        KEYCLOAK_PASSWORD: infres11
+        PROXY_ADDRESS_FORWARDING: "true"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.keycloak.rule=Host(`keycloak.gesco.ml`)
+      - traefik.http.routers.keycloak.entrypoints=websecure
+      - traefik.http.routers.keycloak.tls.certresolver=myresolver
+      - traefik.http.services.keycloak.loadbalancer.server.port=8080
+
+  gesco-database:
     image: postgres:9.6.20-alpine
+    container_name: gesco-database
+    restart: unless-stopped
     environment:
       - POSTGRES_DB=db
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=admin
-    ports:
-      - "5432:5432"
     volumes:
-      - ./database/data:/var/lib/postgresql/data
+      - /data/db_gesco:/var/lib/postgresql/data
+    networks: 
+      - web
 
-  backend:
+  gesco-backend:
+    container_name: gesco-backend
     build:
-      context: https://corentin-grard:DU1sMNVe9xssxyeKjYsY@gitlab.mines-ales.fr/infres-11-projet-3a/gesco/backend.git
+      context: https://github.com/CorentinGrard/Gesco-backend.git
+      args:
+        - DATABASE_URL=postgresql://admin:admin@gesco-database:5432/db?serverVersion=5.7
+    restart: unless-stopped
     depends_on:
-      - database
+      - gesco-database
     environment:
-      - DATABASE_URL=postgresql://admin:admin@database:5432/db?serverVersion=5.7
+      - DATABASE_URL=postgresql://admin:admin@gesco-database:5432/db?serverVersion=5.7
       - POSTGRES_PASSWORD=admin
       - APP_ENV=dev
       - APP_SECRET=13bf30003133e6c57953c89d7e0b72e9
-      - KEYCLOAK_URL=http://matthieu.ga:2099/auth/realms/imt-mines-ales/protocol/openid-connect/userinfo
+      - KEYCLOAK_URL=https://keycloak.gesco.ml/auth/realms/imt-mines-ales/protocol/openid-connect/userinfo
       - KEYCLOAK_CLIENT=gesco
       - KEYCLOAK_SECRET=f6XT5llLANFDQ7wpG8A23w8adb_U1pvvPaXwXE-EvNc
-    ports:
-      - "8000:8000"
+    networks: 
+      - web
 
-  frontend:
+  gesco-frontend:
+    container_name: gesco-frontend
     build: 
-      context: https://corentin-grard:DU1sMNVe9xssxyeKjYsY@gitlab.mines-ales.fr/infres-11-projet-3a/gesco/frontend.git
+      context: https://github.com/CorentinGrard/Gesco-frontend.git
       args:
-        - VUE_APP_KEYCLOAK_URL=http://matthieu.ga:2099/auth/
+        - VUE_APP_KEYCLOAK_URL=https://keycloak.gesco.ml/auth/
         - VUE_APP_KEYCLOAK_REALM=imt-mines-ales
         - VUE_APP_KEYCLOAK_CLIENT_ID=gesco
         - VUE_APP_BASE_URL=/
-        - VUE_APP_BACKEND_BASE_URL=http://localhost:8000
-    ports:
-      - "8080:80"
+        - VUE_APP_BACKEND_BASE_URL=https://gesco.ml/api
+    restart: unless-stopped
+    networks: 
+      - web
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.gesco-frontend.rule=Host(`gesco.ml`)
+      - traefik.http.routers.gesco-frontend.entrypoints=websecure
+      - traefik.http.routers.gesco-frontend.tls.certresolver=myresolver
+  
+networks:
+  web:
+    external:
+      name: traefik_webgateway
